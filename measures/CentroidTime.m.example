@@ -1,0 +1,26 @@
+function y = CentroidTime(cmd, name, clickTF, selTF, gramletTF, gramlet,params)
+%CentroidTime	Osprey measure: centroid time
+%   Measure the weighted mean of the time, where the weights are the
+%   energies present in each time slice.
+%
+%   See README.txt in this directory for the calling convention and args.
+%   This file is called 'CentroidTime.m.example' so that it is explicitly
+%   NOT a .m file, and thus does not get loaded by Osprey.
+
+switch(cmd)
+case 'init'
+  y = struct(...
+      'longName',	'Centroid Time', ...
+      'screenName',	'Cen T', ...
+      'type',		'gramlet', ...
+      'fixTime',	1, ...
+      'sortIndex',	22, ...
+      'unit',		's');
+  
+case 'measure'
+  n = nCols(gramlet);
+  tf = gramletTF;		% called bx in mainSet.m
+  v = sum([zeros(1,n); exp(gramlet).^2]);
+  y = sum(v .* ((0.5:n) / n * (tf(3)-tf(1)) + tf(1))) / sum(v);
+
+end	% switch

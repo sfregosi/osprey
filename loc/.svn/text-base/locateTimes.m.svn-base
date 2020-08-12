@@ -1,0 +1,58 @@
+
+% This script runs Steve Mitchell's locator, using a given array
+% and the arrival times of sounds at the phones in this array.
+% Upon entry, you need these variables defined:
+%
+%    arr        D x n	phone positions, meters
+%    arrivals   n x 1	arrival times of the sound at each phone, seconds
+%    p          1 x k	(optional) which phones (from arr and arrivals) to use
+%    c          scalar	speed of sound, m/s
+%    limits		limits of grid for initial guess and for plotting
+%		1 x 4	(for 2-D) [xmin xmax ymin ymax]
+%		1 x 6	(for 3-D) [xmin xmax ymin ymax zmin zmax]
+%    resolution scalar	(optional) grid size for finding best-fit loc, meters
+%    tolerance  scalar	(optional) time-of-arrival error allowed, seconds (used
+%			in plotting)
+%
+% This routine displays the phones, plots the hyperbolas, calculates the
+% best location, and prints and plots it.  It also sets these variables:
+%
+%    xopt       optimal X-Y position (m)
+%    actual     actual arrival-time differences
+%    calc       arrival-time differences for optimal position
+%    err        difference between actual and calc
+%    m          squared error
+%    sigma      mean error
+
+
+if (~exist('limits')), limits = []; end
+if (~exist('tolerance')), tolerance = []; end
+if (~exist('resolution')), resolution = []; end
+if (~exist('p')), p = []; end
+
+if (~isempty(p)), p1 = p;
+else p1 = 1 : size(arr,2); 
+end
+
+[m1,m2,d] = timesToDelays(p1, arrivals);
+if (size(arr,1) == 2)
+  plotPhones(arr(:,p1), limits);                   % turns hold on
+  useful = PlotHyperbolas(d, tolerance, arr, m1, m2, c, limits);
+else
+  useful = 1 : length(m1);
+end
+
+disp('Finding loc...');
+if (exist('xInit', 'var'))
+  [xopt,actual,calc,err,m] = bestFit(m1(useful), m2(useful), ...
+      d(useful), arr, limits, resolution, c, xInit);
+else
+  [xopt,actual,calc,err,m] = bestFit(m1(useful), m2(useful), ...
+      d(useful), arr, limits, resolution, c);
+end
+sigma = showResults(xopt, m1(useful), m2(useful), actual, calc, err, m, c);
+
+set(gca, 'ButtonDownFcn', [
+    'if (strcmp(get(gcf, ''SelectionType''), ''alt'')),' ...
+    'q=get(gca,''CurrentPoint'');xInit=q(1,1:2);locateTimes;clear xInit;'...
+    'end']);

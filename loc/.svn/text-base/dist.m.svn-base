@@ -1,0 +1,6 @@
+function d = dist(a,b)
+% function d = dist(a,b)
+%
+% Finds the Euclidean distance between points a & b in R^n
+
+d = norm(a-b);

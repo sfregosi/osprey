@@ -1,0 +1,631 @@
+
+Osprey 1.9 Guide
+----------------
+
+Osprey is a program for viewing, measuring, and printing spectrograms
+of sound files.  It allows you to change various parameters that
+affect the computation and display of spectrograms.  It computes and
+caches spectrogram values on demand, minimizing computation time.  It
+also allows manual logging of information about the sound (time,
+frequency, energy, etc.) for use in acoustic analysis.
+
+This version of Osprey runs under MATLAB 9 (and hopefully earlier
+versions though this hasn't been tested thoroughly).  Matlab is
+available from The MathWorks, Inc., Natick, MA, or www.mathworks.com
+
+Bug reports and suggestions for improvements are heartily encouraged.
+Please send them to David.Mellinger@oregonstate.edu.
+
+
+Contents of this file:
+
+	Installing Osprey
+	Starting It
+	Running It and Using It
+	Selections
+	Playback
+	Saving Images to Disk
+	Printing
+	The Window Menu
+	The Spectrum
+	Measurements
+	Localization
+	Preferences
+	The Datalog
+	Programming Interfaces
+	File Formats
+	Batch Processing
+	Troubleshooting
+
+
+Installing Osprey
+-----------------
+
+When you get Osprey, you should have a .zip or .tar file.  (If its
+extension is .zup, change it to .zip first.)  Unpack it (on Windows,
+right-click on it and choose "Extract All...").  This will create a
+directory named "osprey" which must be added to your MATLAB search
+path.  You can do this via the "Set path" button on the "HOME" tab in
+the Matlab command window, or by inserting the following line in your
+startup.m file:
+
+       path('osprey', path);
+
+You may need to use a full path if you can't launch Osprey as detailed 
+below. In this case, do something like one of these instead, modified for
+the directory (folder) where you unpacked osprey:
+
+       path('C:\Users\dave\Documents\MATLAB\osprey', path);   % on Windows
+       path('/usr/dave/osprey', path);                        % on Linux
+
+
+Starting It
+-----------
+
+The easiest way to run Osprey is to type "osprey" at a MATLAB prompt.
+You will be presented with a dialog box for choosing a sound file.
+Pick a sound file and Osprey should display it in a window on the
+screen.  If it doesn't, see the section on file formats, below.
+
+You can also run Osprey with an argument, such as the example file
+osprey\humpback.au, by typing
+
+		osprey osprey\humpback.au
+
+at the MATLAB prompt.  If the file name has spaces in it, MATLAB will
+require you to use the function form:
+
+		osprey('osprey\humpback.au')
+
+If the filename starts and ends with double-quotes, Osprey will remove
+them, so you can also do this:
+
+		osprey('"osprey\humpback.au"')
+
+Removal of the quote marks makes it easy to use Windows's "Copy file
+as path name" feature, which you can get by doing Shift-RightClick on
+a file in Windows Explorer.
+
+If your sound file doesn't have an extension, then you can specify the
+file type by executing the osprey() function with two arguments.  For
+instance, if you have an AIFF file named myfile (with no extension),
+then start Osprey with the command
+
+                osprey('myfile', 'aif')
+
+An example for a WAVE file would be
+
+                osprey('myfile', 'wav')
+
+A similar thing works for linear mono 16-bit binary files as well.
+Specify the sampling rate as the second argument to osprey.  For
+instance, a 11-kHz file would be given like this:
+
+                osprey('myfile', 11000)
+
+Finally, you can also start Osprey running if you have a vector of
+samples you want to look at.  Just do
+
+                osprey(samplevector, samplingrate)
+
+to specify your vector of sound samples (here named samplevector) and
+the sampling rate (here named samplingrate) of these samples.
+
+In Windows, you can make an icon that will launch Matlab and then
+automatically launch Osprey too.  See the file osprey\startup.m for
+instructions.
+
+
+Running It and Using It
+-----------------------
+
+The menu commands, buttons, and other controls are meant to be
+self-explanatory, provided you know basically how a spectrogram is
+computed.  A "frame" is the amount of data used for each FFT, i.e.,
+for each vertical spectrogram slice.  You can specify via "Zero
+padding" that each frame of data is to be padded with zeros before the
+FFT, which gives more frequency bins in the image (but not a smaller
+filter bandwidth); zero-padding of 3x or so is useful for making
+images for publication.  "Hop size" refers to the distance between
+successive frames of data; hop sizes less than one mean that
+successive frames overlap, while hop sizes greater than one mean that
+samples are skipped.  A hop size of 1/2 is usually good for simple
+examination of a sound file, and 1/8 is good for publication-quality
+images.  Smaller hop sizes and larger zero-padding will slow things
+down, since they require more computation, and will also require more
+memory.
+
+The menu option "Window->Guess brightness and contrast" makes a guess
+at good brightness and contrast values.  Usually the brightness and
+contrast need a little tweaking after this but not a lot.
+
+File->Channel lets you pick which channel(s) of the file to view.
+
+
+Selections
+----------
+
+You can make selections in the image by clicking the left and right
+mouse buttons (on one-button mice, use click and control-click,
+respectively).  Clicking with the right button again will extend the
+selection.  The selection color is controlled from the Preferences
+menu.  With a selection, you can play it through the loudspeaker
+(click the Play button); zoom to it horizontally, vertically, or both
+(Zoom->whatever); save it to a file (File->Save selection as); or
+store it in a variable for use in your own Matlab routines
+(Edit->Copy).  Selections are also used for some of the measurements,
+such as start time, energy, and peak frequency.
+
+
+Playback
+--------
+
+The "Playback rate" button next to the play button controls the speed
+of playback.  The set of possible playback rates is determined from
+the natural sampling rate of the computer, which is set in
+utils\defaultsrate.m; feel free to modify the latter (and please send
+me the improvements).  You can also define your own playback rate with
+"Other...", though the actual playback rate may be different from what
+you ask for since the sample-interpolation is limited in flexibility.
+
+
+Saving Images to Disk
+---------------------
+
+"Save image->PNG file" makes a screen-size image of the spectrogram as
+a Portable Network Graphics file, and similarly for the other image
+file formats here -- JPEG and EPS (Encapsulated PostScript).  If the
+output margins come out wrong, change the variable opEpsMargin in
+opNewChan.m.  (This variable has the name EPS in it, but it applies to
+all of the image file formats.)
+
+
+Printing
+--------
+
+The "Print" menu command options can be confusing.  "Print->full page"
+means that what is currently is on the screen is blown up to full page
+size on the printout.  "Print->screen size" means that the image is
+printed at the same scaling as on the screen; if the image is bigger
+than the page, you lose part of the image.  "Print->many pages" is
+made for printing long sounds; it uses the same image scaling as seen
+on the screen, but fills each page up horizontally with as much sound
+as will fit, and starts the next page where it left off.  The "Print
+preferences" submenu is meant to be self-explanatory.
+
+
+The Window Menu
+---------------
+
+"Manual sizing" allows you to adjust the size of the image on the
+screen.  This allows you to print things out at a consistent size.
+"Manual scaling" allows you to specify the number of seconds per inch
+displayed horizontally and Hertz per inch displayed vertically.
+"Redraw" is there in case your window somehow gets corrupted.
+
+
+The Spectrum
+------------
+
+If you double-click on the spectrogram, Osprey will display a power
+spectrum.  When there is no selection, this spectrum is for the single
+spectrogram time slice that you clicked on; it spans the range from 0
+Hz to half the sampling rate (the Nyquist rate).  If there is a
+selection, this spectrum spans the time and frequency range of the
+selection.
+
+
+Measurements
+------------
+
+The lower left corner of the screen shows several measurements that
+can be made.  Click with the left button to get 'point' measurements
+-- those that depend on a single mouse click, like time, frequency,
+amplitude, etc.  Some measurements -- start/end time, duration,
+low/high frequency, bandwidth, energy, peak time/freq/amp -- are for
+selections, and will stay blank until you make a selection.  See
+"Selections" above for how to do this.  Which measurements are
+displayed is controlled via Preferences->Measurements.  The set of
+measurements also controls what goes into the Datalog (see below).
+
+The set of measurements now includes a large set that were developed
+in collaboration with the Macaulay Library (esp. Jack Bradbury) and
+the Bioacoustics Research Program (esp. Kurt Fristrup) at Cornell, and
+other partners elsewhere.  See
+
+    http://mlsource.ornith.cornell.edu/forum/viewforum.php?f=2
+
+for a description of the project.  These measurements are listed in a
+separate column on the right of Osprey's Preferences->Measurements
+window; their names all start with M<number>, where <number> is a one-
+or two-digit number.  You're encouraged to use try these measurements
+out; please let us know which ones you find useful.
+
+If you like, you can add your own measurements to the set of
+measurements that Osprey makes.  See osprey\measures\README.txt for
+details.
+
+
+Localization
+------------
+
+Osprey will do acoustic localization of a sound. It uses a method
+based on the time differences between when a sound arrives at
+different microphones or hydrophones ("phones"). To use it, you must
+have the Matlab's Optimization Toolbox. You also need to have a
+multi-channel sound file with the channels synchronized in time. If
+you have a separate sound file for each channel with synchronization
+times across the files, contact me for a "zipper" program that makes
+single-channel files.
+
+To use it, open a multi-channel file and adjust the spectrogram
+parameters until you can see the calls of interest. Next you need to
+tell Osprey the X-Y positions of your phones. The easiest way to do
+this is with a static phone array file: make a text file (.txt) using
+your favorite text editor (say, Notepad) with several rows, one row
+per phone, with each row having the X- and Y-coordinate (in meters) of
+that phone. Separate the X- and Y-values with a space, tab, or
+comma. If you have a 3-D array, you can also include a Z-coordinate in
+the array file. In Osprey, do with "Locate->Localization options",
+click the "Load static phone array from file" button, and choose your
+.txt file to load. Osprey now knows where your phones were. At the
+bottom of the "Localization information" dialog box is a check-box
+named "Display the location map"; you should check this.
+
+You also must specify the speed of sound in meters per second. If you
+don't know it, you can use these approximations that will get you
+results that are kind of close to the right ones, but not highly
+accurate: 
+- In the ocean, if your phones are within around a kilometer of each
+other, you can use 1500 m/s.
+- In the air, if your phones are within a few hundred meters of each
+other, you can use 343 m/s.
+
+Next, select a call in one channel with a left- and right-click around
+it; try to make the selection as tight as possible around the call so
+you include as little noise as possible.
+
+Selection boxes will have appeared in all the channels, but in the
+channels other than the original channel you made a selection in, the
+boxes might not be on top of the call because the sound arrived on
+that channel before or after the call in the original channel. You can
+fix this by sliding the boxes left and right: put the mouse on top of
+a selection box, hold down the left mouse button, and slide the
+selection box left or right until it's on top of the call. Do this in
+each channel so all the boxes are on top of the calls. Then do
+Locate->Locate selection to have Osprey acoustically locate the source
+of the sound.
+
+The location should be plotted on a map, along with your phone
+locations and the hyperbolae corresponding to the time delays in your
+sound. The X-Y location is ALSO put numerically in two measurements
+called "x loc" and "y loc", and a third called "z loc" if you do 3-D
+localization. These are shown at lower left in the main Osprey
+mindow. To store these numeric locations temporarily, do a
+Shift-left-click on your selection (i.e., hold down the keyboard's
+Shift key while left-clicking with the mouse), which will put the
+numbers into a Datalog. After localizing one or more calls and putting
+the X-Y locations into the Datalog, you can then save the Datalog in a
+file as described below.
+
+
+Preferences
+-----------
+
+The preference named "Measurements" controls what numbers show up in
+the lower left corner of the screen, and also what gets put in the
+datalog (see below).  The preferences "H scroll" and "V scroll"
+specify how far a click in the slider bar moves the image.  Choosing
+"3/4 screen" means that the image moves that far, i.e., there will be
+1/4 screen of overlap between successive images.
+
+"Preferences->Save" lets you store your current set of preferences as
+a text file for later loading.  When you save preferences, you are
+first shown a menu in which you can pick which preferences you want to
+save.  For the animal sounds I look at often, it's most useful to save
+the spectrogram computation parameters, less useful to save a
+frequency range, and rarely useful to save the file name.  You can
+edit Preferences files with a text editor if you like.
+
+An autoloaded preference file lets you define a preferences file that
+will get re-loaded every time you open a new file.  (Don't include the
+file name as one of the saved preferences in the autoload file!)  Just
+do "Preferences->Autoload" and choose a file.  It will get loaded
+immediately, as well as after every new file that is opened.  To
+cancel autoloading, do "Preferences->Autoload" and hit Cancel.
+
+
+The Datalog
+-----------
+
+The datalog is a mechanism for accumulating and storing measurements.
+The datalog is kept within Osprey, and is not stored in a file until
+you explicitly save it.  To add a point to the datalog, select a
+region on the screen with left- and right-clicks, then click the
+center mouse button (in Windows, this is shift-click).  You can also
+clear the datalog, remove the most recent entry, and save the datalog.
+Entries in the datalog are the measurements you have chosen with the
+"Preferences->Measurements" menu, so if you have six measurements
+displayed, your datalog will have six values per point -- six columns
+of data.
+
+You can view entries that are in the datalog using the
+"Datalog->Next/Previous log entry" menu choices.  Osprey will find the
+next datalog entry after/before the current selection, respectively.
+(If the current selection matches a log entry exactly, then Osprey
+uses the next/previous entry in the datalog; if it doesn't match, then
+Osprey finds the next/previous entry in time.  These are different
+only if your datalog entries are not sequential in time.)  Sometimes
+it's very useful to load a saved datalog (Datalog->Load) and then view
+its entries (Datalog->Next/Previous log entry).
+
+Datalogs are NOT automatically saved on disk; you must do this
+explicitly with one of the "Datalog->Save log..." options.  As a
+backup system, Osprey does write all datalog entries to a file named
+OspreyBackupDatalog.txt.  So if Matlab crashes, you can edit this file
+in a text editor like WordPad to remove all but the data you want to
+recover, then load the lost log entries using Datalog->Load.
+
+To get at the datalog values, either use the global variable 'opLog',
+or save the datalog.  Each datalog point is one row of the saved
+array, with one column per measurement for that point.  If the datalog
+is saved as a MATLAB file, the log itself is a variable named
+"datalog" and the column names are given by the string array
+"datacolumns".  If it's saved as an ASCII (text) file, the columns are
+named on the first line of the file.
+
+You can have more than one datalog in existence at a time.  This is
+useful, for instance, when you're measuring different individual
+animals in a recording, or have different call types from one
+individual, that you want to keep separate.  Do "Datalog->Use multple
+logs" and say how many datalogs you want.  Osprey's method of handling
+multiple datalog is to have one 'active' datalog at a time.  All
+datalog actions apply to the active log, including adding a point,
+clearing it, printing it, loading a log, etc.  "Clear all" and "Save
+all" let you act on all of the extant datalogs.  You can change which
+datalog is the active one via the small window that has one radio
+button per datalog.
+
+
+Programming Interfaces
+----------------------
+
+There are several ways that Osprey and other Matlab programs can
+interact:
+
+1) You can make Osprey open a sound file named, for example,
+   'mysoundfile.wav' with a call like this:
+
+       osprey('mysoundfile.wav')
+   
+2) To make Osprey display a certain portion of the recording, do 
+   something like this:
+
+	    osprey('mysoundfile.wav', [time0 time1])
+   or   osprey('mysoundfile.wav', [time0 time1 freq0 freq1])
+	
+   Note time0 and time1 are in seconds from the start of the file, 
+   and freq0 and freq1	are in hertz. You can also have it display
+   a selection box (which is helpful for highlighting things):
+	
+	    osprey('mysoundfile.wav', ...
+		[time0 time1 freq0 freq1 selTime0 selTime1 selFreq0 selFreq1])
+
+   If the file is already open in Osprey, you can do this instead:
+	
+       global opT0 opT1 opF0 opF1     % time and frequency limits
+       ...then set opT0, opT1, opF0, opF1 as desired ...
+       opRefresh;
+
+   This will set the time and frequency bounds of the current
+   Osprey display to opT0/T1/F0/F1.  If spectrogram parameters have
+   changed and you want the spectrogram recalculated, use
+   opRefresh(1).  If you want brightness and contrast re-estimated
+   too, use opRefresh(1,1).  The global variables opSRate,
+   opHopSize, opDataSize, opZeroPad, and opWinType are useful too.
+   opNsamp says how many samples per channel are in the sound file.
+   See opGlobals for a longer (though unfortunately not complete) list
+   of Osprey's global variables.
+
+   If you want a selection defined, say for making measurements or
+   spectra, you can define the selection bounds by setting the global
+   variables opSelT0/opSelT1/opSelF0/opSelF1 before calling opRefresh
+   as above.  Remember to do 'global opSelT0 opSelT1 opSelF0 opSelF1'
+   first.  If you don't want a selection, just set opSelT0 and opSelT1
+   to 0.
+
+3) "Edit->Copy" places a copy of the current selection, as a time
+   series (waveform), into the global variable opSelection.  To use
+   this, first do "global opSelection".  The global variable opSrate
+   is useful here too.  Once the samples are in opSelection, you can
+   do with them what you wish.  You can also make the Copy operation
+   happen programmatically by calling opEdit('copy').  See above for
+   how to define the current selection using the global variables
+   opSelT0/opSelT1/opSelF0/opSelF1.
+
+4) Whenever you display a spectrum, Osprey places the vector with the
+   spectrum values (in dB) into the global variable opSpectVec.  Also,
+   you can get Osprey to calculate a spectrum of the current selection
+   and set opSpectVec (as defined by opSelT0/opSelT1/opSelF0/opSelF1,
+   above) by calling
+
+       opSpectrum('show',1)
+
+   After this, opSpectVec will be set as desired.
+
+5) "View->Linked windows" allows you to control another window's
+   scrolling from Osprey.  Whenever you scroll left or right in
+   Osprey, the other window's x-axes is set to the new time bounds in
+   Osprey.  You can link as many windows as you like this way.
+
+6) To get the current vector of measurement values, do
+
+       values = opMeasure('logpt', channelnum, [0 0]);
+
+   The return value is a row vector with the current set of measurements.
+
+   The file measurement_example.m shows how to make measurements of a
+   set of known times in a sound file.
+
+7) To load a set of preferences, do this:
+
+       opPrefSave('load-file', filename)
+
+   where 'filename' is the name of the file to load.
+
+8) To switch between multiple logs, do this:
+
+       opMultiLog('click', N)
+
+   where N is the number of the log to switch to.  Log numbers start
+   at 1.  And to advance forward or backward in the current log, do
+   this:
+
+       opDataLog('next')     or     opDataLog('prev')
+
+
+File Formats
+------------
+
+Osprey knows several sound file formats. Please add yours!  File
+formats are determined from file extensions.  This can be a little
+clunky on the Mac, where normally files don't have extensions; see
+"Starting it up," above, for information about specifying a file type
+without needing a file extension.
+
+The currently supported file formats are
+
+        .au     Sun sound file (same format as .snd)
+        .wav    WAV file, a popular PC format
+        .snd    Next sound file
+        .mat    MATLAB file; there must be variables in it named
+                        'sound' and 'samplingrate' (or 'srate')
+        .aif    AIFF file
+        .b1, .b10, .b80, etc.
+                headerless mono binary file with samples encoded as
+                2-byte shorts; the number after the 'b' is the
+                sampling rate / 100, so '.b1' is 100 Hz, '.b80' is
+                8000 Hz, etc.
+        other formats
+                other formats supported by readsound.mex (available on
+                Mac and PC) are handled by Osprey, though it can be slow
+
+If you wish to add a format, the routine that reads sound files is
+osprey\utils\soundIn.m.  The code should be fairly straightforward,
+though there can be trickiness with the "offset" variable,
+particularly with multi-track files.  You should be sure that the
+variables "sRate", "sound", and "left" are set appropriately at the
+end of your code.  If you add a new sound file extension, modify
+opSoundFileType.m too.
+
+
+Batch Processing
+----------------
+
+Osprey can take a list of time/frequency boxes and make measurements on them, 
+writing the results to a file. See measurement_example.m in the main Osprey 
+directory for how to do it.
+
+
+Troubleshooting
+---------------
+
+Please send bug reports and suggestions to the email address mentioned
+at the beginning of this file.
+
+All manner of bugs can come up in Osprey, only a few of which I can
+anticipate:
+
+- Osprey complains, "Can't figure out file type of <filename>."
+
+  The file type you're using is not known to Osprey.  Please contact
+  me, or preferably modify osprey\utils\soundIn.m or soundFileType.m,
+  and send me the new version. 
+
+
+- Osprey complains about not knowing the "default sampling rate".
+
+  Fix up the file osprey\utils\defaultsrate.m to include your
+  computer.  Then please send the changes to me at the address
+  mentioned previously.
+
+
+- Sounds are played back at the wrong pitch.
+
+  See the previous paragraph, about fixing up defaultsrate.m .
+  The other possibility for problems here is utils\soundPlay.m.
+  Sometimes it helps simply to quit Matlab and restart it.
+
+
+- MATLAB runs out of memory.
+
+  The first answer, of course, is to buy more memory.  Right.  Another
+  answer is to reduce Osprey's cache size.  It is initially set at
+  5000000 samples, which takes 40 MB of memory.  Do this in in
+  opCache.m by uncommenting the lower value of maxCache.
+
+
+- Osprey is slow.
+
+  Yes, aren't we all sometimes.  Some things to speed it up:
+     - Don't do "Zoom->to whole sound" on a large file. Generally the
+       less sound you have on-screen at once, the faster Osprey is.
+     - Reduce the Hop Size or Zero Padding values via the drop-down
+       menus at the left of the Osprey window.
+     - Turn off the "energy", "peak freq", "peak time", and "peak amp"
+       measures, as they are especially slow 
+     - Turn off all of the measures; this saves a little on display time 
+     - Click the "stretch horizontal" button so you're looking at less
+       data at a time.
+
+
+- Osprey takes forever to respond after "select all, H only" or
+  "select all".
+
+  This is probably because one of the measures needs the entire
+  selection -- the spectrogram of the whole sound -- to calculate its
+  value.  Turn off the energy, peak frequency, and peak time, and peak
+  amp measures.
+
+
+- Osprey prints out "Warning: Log of zero" sometimes.
+
+  It's safe to ignore this warning, though you'll probably see blank
+  (white) areas on the screen.  It happens when the sound energy at a
+  given frequency is zero for some period of time.
+
+
+- The Osprey window and other MATLAB figure windows get mixed up, with
+  other plots showing up in the Osprey window.
+
+  Unfortunately this is a MATLAB misfeature and there's not much
+  Osprey can do about it.  The problem is that the current window is
+  set to the Osprey window whenever Osprey draws something, so later
+  plots show up there.  The workaround is to make sure you do a
+  figure(n) call before plotting anything, where n is the figure
+  number of your other window.
+
+  Another good workaround is to run two MATLABs at once, in two
+  different windows. Run Osprey in one MATLAB window, and do your
+  other MATLAB computing in the other.
+
+
+- You want to have two Osprey windows at the same time.
+
+  This will be part of Osprey some day, but not now.  The best
+  workaround is to run two copies of MATLAB and start up Osprey
+  separately in each one.
+
+
+- Sometimes clicking the brightness and contrast sliders doesn't
+  change the image; you have to click twice to get any change.
+
+  Try waiting a bit longer getween clicks.  Matlab doesn't handle
+  rapid-fire mouse clicks very well.
+
+
+- Clicking with the middle button (or shift-click) makes some numbers
+  appear in the Matlab command window.
+
+  Your clicks are adding entries to the datalog.  See the Datalog
+  section above.
