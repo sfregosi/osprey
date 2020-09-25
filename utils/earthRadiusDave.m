@@ -1,4 +1,4 @@
-function r = earthRadius(lat)
+function r = earthRadiusDave(lat)
 %earthRadius		return the Earth's radius for a given latitude
 %
 % r = earthRadius(latitude)
