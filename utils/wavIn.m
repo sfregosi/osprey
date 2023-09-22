@@ -1,12 +1,11 @@
 function [y0,y1,y2,y3] = wavIn(filename, typ, start, nframe, chans)
 %WAVIN   Read a single 'chunk' of a WAV file.
 %
-% [nchan,sampleSize,sRate,fmt,subfmt] = wavIn(filename, 'fmt')
+% [nchan,sampleSize,sRate,fmt] = wavIn(filename, 'fmt')
 %    From the given WAV file, read the WAVE chunk (the main header) and return,
 %    respectively, the number of channels (e.g. 2 for stereo), the sample size
 %    in bits/sample, the sampling rate (samples/s), and the format (1 means
-%    linear [PCM] shorts, 3 means linear [PCM] longs, -2 means to use subfmt,
-%    other values are invalid; subfmt is similarly 1 or 3 or invalid).
+%    linear [PCM] shorts, 3 means linear [PCM] longs, other values are invalid).
 %
 %    The file is assumed to have little-endian (PC-style, not Mac/Sun/HP style)
 %    numbers.
@@ -52,6 +51,11 @@ function [y0,y1,y2,y3] = wavIn(filename, typ, start, nframe, chans)
 %    and return it as a vector of bytes (values 0-255).  The entire chunk 
 %    is returned.
 %
+% [...] = wavIn(fd, ...)
+%    The file specifier can also be an open file number as returned by fopen.
+%    Upon return, the position in the file is restored to the same place as upon
+%    the call to wavIn. Use an fopen call like fopen(filename, 'r', 'l').
+%
 % See also 
 %    soundOut    a general-purpose interface to all the sound output routines
 %    soundIn     a general-purpose interface to all the sound input routines
@@ -66,12 +70,19 @@ function [y0,y1,y2,y3] = wavIn(filename, typ, start, nframe, chans)
 
 while (length(typ) < 4), typ = [typ ' ']; end			%#ok<AGROW>
 
-if (~strcmp(typ, 'fmt '))
-  [nc,ss,~,fmt] = wavIn(filename, 'fmt ');	% work around MATLAB misfeature
+if (isnumeric(filename))
+  fd = filename;
+  fdPlace = ftell(fd);
+  fseek(fd, 0, 'bof');
+else
+  fd = fopen(filename, 'r', 'l'); % WAVE is little-endian (low-order byte first)
+  if (fd < 0), error(['File not present: ' filename]); end
 end
 
-fd = fopen(filename, 'r','l');   % WAVE is little-endian (low-order byte first)
-if (fd < 0), error(['File not present: ' filename]); end
+if (~strcmpi(typ, 'fmt '))
+  [nc,ss,~,fmt] = wavIn(fd, 'fmt ');	% work around MATLAB misfeature
+end
+
 [x,n] = fread(fd, 12, 'char');
 if (n<12 || ~strcmp(char(x(1:4).'), 'RIFF') || ...
       ~strcmp(char(x(9:12).'), 'WAVE'))
@@ -79,30 +90,20 @@ if (n<12 || ~strcmp(char(x(1:4).'), 'RIFF') || ...
   error(['File is not a .WAV file; can''t read it: ', filename]);
 end
 
-% Extract date, if any, from filename. A date is assumed to be any string
-% dddddd-dddddd[.ddd...] where the '-' can be -, _, or T.
-f = pathFile(filename);
-y3 = findDateInString(f);
-if (isnan(y3)), y3 = []; end	% default values for dates
-% OLD:
-% pos = regexp(f, '\d\d\d\d\d\d[-_T]\d\d\d\d\d\d', 'once');
-% if (~isempty(pos))
-%   v = sscanf(f(pos:end), '%2d%2d%2d%*c%2d%2d%f');
-%   v(1) = v(1) + 1900 + iff(v(1) < 80, 100, 0);
-%   y3 = datenum(v.');
-% end
+y3 = extractDatestamp(pathFile(filename));      % get date from filename
+if (isnan(y3)), y3 = []; end                    % default value for dates
 while (1)
   x = char(fread(fd, 4, 'char').');
   [len,n] = fread(fd, 1, iff(version4, 'long', 'int32'));
   if (n < 1)
     fclose(fd);
     error(['Unexpected end of file while looking for chunk type "' typ ...
-	'" in WAV file ' filename]);
+	'" in WAV file ' char(filename)]);
   end
   while (length(x) < 4), x = [x ' ']; end			%#ok<AGROW>
   x1 = find(x == 0);
   x(x1) = char(' ' * ones(1, length(x1)));
-  if (strcmp(x, typ))
+  if (strcmpi(x, typ))
     break
   elseif (strcmp(x, 'MTE1'))
     % Read the date/time fields for AURAL M-2 WAVE files.  Precision: 1/100 s.
@@ -119,7 +120,7 @@ end
 if (len == 0), len = inf; end
 len = min(len, flength(fd) - ftell(fd));
 
-if (strcmp(typ, 'fmt '))
+if (strcmpi(typ, 'fmt '))
   % Read header info.
   y3       = fread(fd, 1, 'short');	% fmt
   y0       = fread(fd, 1, 'short');	% nChan
@@ -135,7 +136,7 @@ if (strcmp(typ, 'fmt '))
     y3 = fread(fd, 1, iff(version4, 'long', 'int32'));
   end
   
-elseif (strcmp(typ, 'data'))
+elseif (strcmpi(typ, 'data'))
 
   if (fmt ~= 1 && fmt ~= 3 && fmt ~= -2)    % 1 is integer PCM, 3 is float PCM
     error('Unknown .wav file format: %d (I know only PCM formats 1 and 3)', ...
@@ -182,4 +183,8 @@ else
 
 end
 
-fclose(fd);
+if (isnumeric(filename))
+  fseek(fd, fdPlace, 'bof');
+else
+  fclose(fd);
+end

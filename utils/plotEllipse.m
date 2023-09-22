@@ -1,13 +1,14 @@
 function ln = plotEllipse(ctr, sz, rot, xyscale)
-%PLOTELLIPSE	Plot an ellipse of a specified size, center, and rotation.
+%PLOTELLIPSE	Plot an ellipse/circle of a specified size, center, and rotation
 %
 % ln = plotEllipse(center, size, rotationDeg)
-%    Plot an ellipse centered at the given position, with the given size,
-%    and rotated clockwise by the specified amount IN DEGREES. The rotation
-%    defaults to 0. 'center' and 'size' should be length-2 vectors. 'size' is
-%    the desired diameter (not semi-major axis) of the ellipse. Assumes that
-%    the x- and y-limits of the axes will not change from their current values.
-%    For plotting circles on a lat/lon grid, multiply the size by
+%    Plot an ellipse centered at the given position, with the given size, and
+%    rotated clockwise by the specified amount IN DEGREES. The rotation defaults
+%    to 0. 'size' has the desired diameters (not semi-major axes) of the
+%    ellipse. 'center' and 'size' should be length-2 vectors (though if 'size'
+%    is a scalar it specifies a diameter for the a circle). Assumes that the x-
+%    and y-limits of the axes will not change from their current values. For
+%    plotting circles on a lat/lon grid, multiply the size by
 %               [sec(latitudeInDegrees * pi / 180)  1]
 %
 % ln = plotEllipse(center, size, rotationDeg, xyscale)
@@ -15,6 +16,7 @@ function ln = plotEllipse(ctr, sz, rot, xyscale)
 %    y-axis to the size of the x-axis in the completed plot.  This allows
 %    the x- and y-limits to change after the ellipse is plotted. 
 
+if (length(sz) < 2), sz = [sz sz]; end
 if (nargin < 3), rot = 0; end
 if (nargin < 4)
   xyscale = diff(get(gca, 'YLim')) / diff(get(gca, 'XLim'));

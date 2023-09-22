@@ -16,7 +16,7 @@ function [y,z] = consec(x)
 
 n = length(x);
 if (n)
-  s = find(x(1:n-1) ~= x(2:n)-1);
+  s = find(x(1:n-1) ~= (x(2:n) - 1));	% where the values are non-consecutive
   if (nCols(x) == 1)
     y = x([1 s'+1])';			% x is a column vector
     z = x([s' n])';

@@ -66,13 +66,13 @@ function [sound,sRate,left,nChan,dt,nBits] = ...
 %    Specify the channel number(s) to read.  Channel numbering begins at 0.
 %    This is meaningful only for multi-channel formats, like .aif and .wav.
 %    chans should be a vector of values, not necessarily contiguous, like
-%    [0 2 3 5].
+%    [0 2 3 5]. If you use NaN for chans, all channels are read.
 %
 % sound = soundIn(filename, offset, maxRead, chans, machineformat)
 %    Specify the machine format (e.g., 'b' for big-endian like Sun/Mac/HP,
 %    'l' for little-endian like PC/Vax).  See fopen for all of the options.
 %    This option is useful only for binary files; all the other types have
-%    a fixed format.  (AIFF files are always big-endian, WAVE are always 
+%    a fixed format (e.g., AIFF files are always big-endian, WAVE are always 
 %    little-endian, and MATLAB files already encode the big/little endian 
 %    information, so machineformat is ignored for these three types.)
 %    If the machineformat is not specified, or it's empty (''), it defaults
@@ -207,9 +207,22 @@ elseif (strcmp(typ, 'aif'))
   left    = nSamp - maxRead - offset;
   
 elseif (strcmp(typ, 'wav'))
-  [nChan,~,sRate] = wavIn(filename, 'fmt ');  % read FORMAT chunk
+  tryNo = 0;
+  while (1)
+    tryNo = tryNo + 1;
+    fd = fopen(filename, 'r', 'l');
+    if (fd >= 0), break; end
+    mprintf('Open attempt #%d failed on %s.', tryNo, filename);
+    if (tryNo >= 10)
+      error('Unable to open file %s.', filename);
+    end
+    pause(10);
+  end
+  [nChan,~,sRate] = wavIn(fd, 'fmt ');  % read FORMAT chunk
   if (isnan(chan)), chan = 0 : nChan-1; end
-  [sound,left,nBits,dt] = wavIn(filename, 'data', offset, maxRead, chan);
+  [sound,left,nBits] = wavIn(fd, 'data', offset, maxRead, chan);
+  fclose(fd);
+  dt = extractDatestamp(filename);
   
 elseif (strcmp(typ, 'haru'))
   [~,nChan] = haruIn(filename, 0, 0);
@@ -219,6 +232,10 @@ elseif (strcmp(typ, 'haru'))
 
 elseif (strcmp(typ, 'pmar'))
   [sound,nChan,~,sRate,left,dt] = pmarIn(filename, offset, maxRead, chan);
+
+elseif (strcmp(typ, 'wispr'))
+  [sound,nChan,nBytes,sRate,left,dt] = wisprIn(filename, offset, maxRead, chan);
+  nBits = nBytes * 8;
 
 elseif (strcmp(typ, 'psm'))
   [sound,nChan,~,sRate,left,dt] = psmIn(filename, offset, maxRead, chan);
@@ -246,7 +263,8 @@ elseif (strcmp(typ, 'flac') || strcmp(typ, 'comprs'))
   left  = iff(isinf(maxRead), 0, ai.TotalSamples - (offset + maxRead));
   
   if (isnan(chan)), chan = 0 : nChan-1; end
-  samIx = [offset offset+maxRead] + 1;	  % 1-based [start end] sample indices
+  % Get 1-based [start end] sample indices.
+  samIx = [offset+1 offset+max(maxRead,1)]; % MATLAB requires at least 1 sample
   if ((strcmp(typ, 'flac') || strcmp(typ, 'wav')) && ai.BitsPerSample == 16)
     % This is optimized for 16-bit samples, which is the most common format.
     % Only FLAC and WAVE have a valid BitsPerSample field in ai.

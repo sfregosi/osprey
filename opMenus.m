@@ -78,7 +78,7 @@ uimenu(w, 'Label', 'Manual scaling...',  'Callback', 'opRedraw(''manscale'')');
 uimenu(w, 'Label','Manual T/F limits...','Callback', 'opRedraw(''manTF'')');
 uimenu(w, 'Label', 'Linked windows...',  'Callback', 'opView(''link'');');
 uimenu(w, 'Label', 'Guess brightness and contrast', ...
-    'Callback', 'opRefresh(0,1)');
+    'Callback', 'opRefresh(0,1)', 'Accelerator', 'b');
 drawnow
 %figure(opFig);      % needed in Matlab 6
 

@@ -156,13 +156,15 @@ elseif (strcmp(cmd, 'yaxislabels'))
     if (length(tx) > 1), dig = max(0, -floor(log10(abs(1.01 * diff(tx(1:2))))));
     else dig = 3;
     end
-    for i = 1 : length(tx)
-      t = tx(i);
-      % Get Hz without or with a decimal point.
-      str = iff(dig==0, sprintf('%d',t), sprintf('%*.*f',dig+2,dig,t));
-      if (i == 1), newtx = str; else newtx = str2mat(newtx, str); end
+    if (~isempty(tx))
+      for i = 1 : length(tx)
+	t = tx(i);
+	% Get Hz without or with a decimal point.
+	str = iff(dig==0, sprintf('%d',t), sprintf('%*.*f',dig+2,dig,t));
+	if (i == 1), newtx = str; else newtx = str2mat(newtx, str); end
+      end
+      set(opAxes(ch), 'YTickLabel', newtx);
     end
-    set(opAxes(ch), 'YTickLabel', newtx);
   end
 
 elseif (strcmp(cmd, 'close'))

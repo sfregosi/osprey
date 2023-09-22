@@ -45,8 +45,28 @@ hdr = {};           % holds a copy of the header lines as strings
 while (1)
   lineNo = lineNo + 1;
   ln = fgetl(fp);
+  
+  % Sometimes PMAR .dat files are missing part of the header. Try to cope.
+  if (ln(1) == 0)   % incomplete headers start with buffering 0's
+    % Try to complete the header. Require the header lines samplerate, start.
+    if (~isfield(h, 'samplerate') || ~isfield(h, 'start'))
+      error([mfilename ':IncompleteHeader'], ...
+        'Incomplete header; I can''t cope with the absence of header lines "samplerate" or "start".');
+    end
+    if (~isfield(h, 'nchannels')),  h.nchannels = 1;     end
+    if (~isfield(h, 'dataoffset')), h.dataoffset = 1024; end
+    if (~isfield(h, 'samples'))
+      % Figure out how many samples are in the file.
+      fseek(fp, 0, 'eof');
+      pos = ftell(fp);
+      fseek(fp, h.dataoffset, 'cof');
+      h.samples = (pos - h.dataoffset) / 2;
+    end
+    break
+  end
+  
   hdr = [hdr {ln}];                                             %#ok<AGROW>
-  if (isnumeric(ln) || ln(1) ~= '%' || strindex(ln, ':')==0)
+  if (isnumeric(ln) || ln(1) ~= '%' || ~contains(ln, ':'))
     fclose(fp);
     error('Badly formatted header line in PMAR file %s, line #%d:\n%s', ...
       filename, lineNo, ln);
@@ -68,8 +88,7 @@ while (1)
     case {'samplerate' 'nchannels' 'dataoffset' 'samples'}  % make these numeric
       h.(fieldname) = str2double(h.(fieldname));
   end
-end
-%disp(h)
+end           % while (1)
 
 %% Read samples. 
 % NB: I assumed h.samples means number of samples per channel (i.e., number of

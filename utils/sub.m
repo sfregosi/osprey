@@ -15,7 +15,7 @@ function y = sub(x,i,j)
 %    respectively.  As a special case, if i is 0, return x(:,j), and
 %    analogously if j is 0.  
 
-if (nargin < 3),
+if (nargin < 3)
   if (i == 0), y = x(:);
   else y = x(i);
   end

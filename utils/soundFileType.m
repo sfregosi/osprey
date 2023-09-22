@@ -56,7 +56,7 @@ function [typ,outfilename,ext,chan,fmt] = soundFileType(filename)
 %    (Vax,PC).  See fopen for the full list of possibilities.  '' is returned
 %    if the user doesn't specify it.  
 
-outfilename = filename(1,:);		% may get changed below
+outfilename = char(filename(1,:));	% may get changed below
 ext         = pathExt(outfilename);	% may get changed below
 base        = pathRoot(pathFile(outfilename));
 chan        = [];			% may get changed below
@@ -64,7 +64,7 @@ fmt         = '';
 
 % Process the multi-row filename items.
 for i = 2:nRows(filename)
-  line = deblank(filename(i,:));
+  line = deblank(char(filename(i,:)));
   
   if (strncmp(line, 'type', 4))		% check 'type'
     ext = deblank(line(6:end));
@@ -123,6 +123,10 @@ elseif (strcmp(ext, 'str'))			% Navy file
 elseif (strcmp(ext, 'dat') && strcmpi(base(1:2), 'pm') && ...
     length(base) >= 6 && all(isdigit(base(3:6))))
   typ = 'pmar';
+  
+elseif (strcmp(ext, 'dat') && strcmpi(base(1:5), 'wispr') && ...
+    sum(isdigit(base)) >= 12)	% WISPR files have a date/time stamp
+  typ = 'wispr';
   
 elseif (strcmp(ext, 'dat') || strcmp(ext, 'haru') || strcmp(ext, 'sdat') || ...
     (strindex(lower(base), 'datafile') > 0 ...

@@ -66,15 +66,17 @@ function ret = uiInput(title,buttonList,callback,siz, n1,i1,n2,i2,n3,i3,n4,i4)  
 % uiInput('XXXclickXXX', n)
 %    The user clicked on button number n.  Set up the global variables
 %    and execute the user callback.
+%
+% uiInput('XXXclickXXXkeep', n)
+%    Like XXXclickXXX, but keep the GUI window on the screen.
 
 % Internal details:
 % The figure's UserData contains [button1 edit1 edit2 edit3 ...]
 % where button1 is the button to execute if the user presses return,
 % and edit1 etc. are the edit box objects.
 % 
-% The button objects' UserData contain [keep callback], where 'keep' is a 
-% number saying whether to keep the figure around after pressing this button 
-% and 'callback' is the callback string to execute.
+% The button objects' UserData contain [callback], the callback string or
+% function to execute.
 
 global uiInputButton	 % return value -- button number pressed
 global uiInput1 uiInput2 % return values -- contents of edit boxes
@@ -82,7 +84,7 @@ global uiInput3 uiInput4 %#ok<*NUSED>     ditto
 
 flag = 17.17;		% uiInput figures are marked with this flag value
 
-if ischar(title) && (strcmp(title, 'XXXkeyXXX') || strcmp(title, 'XXXclickXXX'))
+if ischar(title) && (strcmp(title, 'XXXkeyXXX') || strncmp(title, 'XXXclickXXX', 11))
   if (version4), fig = gcf; else [~,fig] = eval('gcbo'); end
   figdata = get(fig, 'UserData');
   if strcmp(title, 'XXXkeyXXX')
@@ -96,7 +98,7 @@ if ischar(title) && (strcmp(title, 'XXXkeyXXX') || strcmp(title, 'XXXclickXXX'))
     uiInputButton = 1;
     butobj = figdata(1);
     if (isnan(butobj))
-      return;
+      return
     end
   else
     uiInputButton = buttonList;
@@ -109,10 +111,12 @@ if ischar(title) && (strcmp(title, 'XXXkeyXXX') || strcmp(title, 'XXXclickXXX'))
     eval(['uiInput' num2str(i-1) ' = get(figdata(i),''String'');']);
   end
   ud = get(butobj, 'UserData');
-  if (~ud(1))			% keep fig after button pressed?
+  if (~strcmp(title, 'XXXclickXXXkeep')) % delete figure after button pressed?
     delete(fig);
   end
-  eval(char(ud(2:nCols(ud))));
+  if (ischar(ud)), eval(ud);
+  else ud();
+  end
 
 else
   % Create a new GUI box.
@@ -126,7 +130,8 @@ else
   end
   fig = figure('Units', 'norm', 'NumberTitle', 'off', 'Name', nm, ...
       'Position', [.4 .4 .3 .3], 'Color', [.7 .7 .7], 'UserData', flag, ...
-      'Pointer', 'arrow', 'KeyPressFcn', 'uiInput(''XXXkeyXXX'');');
+      'Pointer', 'arrow', 'KeyPressFcn', 'uiInput(''XXXkeyXXX'');', ...
+      'Toolbar', 'none', 'MenuBar', 'none');
   set(fig, 'Units', 'pixels');
   axes('Position', [0 0 1 1], 'Visible', 'off');
 
@@ -162,16 +167,19 @@ else
   buttons= zeros(1,nbut);
   for i = 1:nbut
     butname = buttonList(div(i)+1 : div(i+1)-1);
-    keep = (butname(1) == '^');
-    butname = butname(keep+1 : length(butname));
+    keep = '';
+    if (butname(1) == '^')
+      keep = 'keep';
+      butname = butname(2:end);
+    end
 
     cback = callback;
     if (nRows(cback) ~= 1), cback = cback(i,:); end
 
     buttons(i) = uicontrol('Style', 'PushB', 'Units', 'pixels', ...
 	'Position', [left bot bwide bhigh], 'String', butname, ...
-	'Callback', ['uiInput(''XXXclickXXX'', ' num2str(i) ')'], ...
-	'UserData', [char(keep+0) cback]);
+	'Callback', ['uiInput(''XXXclickXXX' keep ''', ' num2str(i) ')'], ...
+	'UserData', cback);
     left = left + bwide + bsep;
   end
   if (nbut > 0)
@@ -199,13 +207,13 @@ else
 
   % Create main text, and title if any.
   txts = [];
-  if (~isempty(title))
+  if (~isempty(title) && (~iscell(title) || length(title) > 1 || ~isempty(title{1})))
     bot = bot + tbot;
     lines = [];
-    if (iscell(title) && length(title) > 1), lines = title(2:end);   end
-    if (ischar(title) && nRows(title) > 1),  lines = title(2:end, :); end
-    if (~isempty(lines))
-      t1 = text(tleft, bot, lines,    'Units', 'pixels', ...
+    if (iscell(title) && length(title) > 1), lines = title(2:end);    end
+    if (ischar(title) &&  nRows(title) > 1), lines = title(2:end, :); end
+    if (~isempty(lines) && (~iscell(lines) || length(lines) > 1 || ~isempty(lines{1})))
+      t1 = text(tleft, bot, lines, 'Units', 'pixels', ...
         'Color', [0 0 0], 'VerticalAlign', 'bottom', 'FontSize', 10);
       bot = bot + sub(get(t1, 'Extent'), 4);
     end
@@ -220,8 +228,8 @@ else
       tt = [];
     end
     txts = [tt txts];
+    bot = bot + top;
   end
-  bot = bot + top;
   
   % Put figure at correct position.
   set(0, 'Units', 'pixels');  ss = get(0, 'ScreenSize');

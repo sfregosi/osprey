@@ -8,8 +8,8 @@ function e = pathExt(p)
 extchar = '.';			% character that starts an extension
 
 e = '';				% default result
-p = pathFile(p);		% get rid of directory part of path
-w = find(p == extchar);
-if (length(w))
-  e = p(w(length(w))+1:length(p));
+p = pathFile(char(p));		% get rid of directory part of path
+w = find(p == extchar, 1, 'last');
+if (~isempty(w))
+  e = p(w+1 : end);
 end

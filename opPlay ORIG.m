@@ -38,7 +38,7 @@ function [factor,var] = opPlay(cmd, avifilename)
 global opc opNSamp opSRate opT0 opT1 opSelT0 opSelT1 spAudioPlayer
 global opPlayBut opFig opTMax opPlayRateMenu opPlayRate opPlayOthers 
 global uiInputButton uiInput1 opPlayCorrection opEpsDir opPlayTimer
-global opFps; opFps = 10; 		% animation frame rate
+global opFps; opFps = 4;		% animation frame rate
 
 %#ok<*DATST>
 %#ok<*DATNM>
@@ -226,7 +226,7 @@ start(tm);			% start bar; also creates movie file if needed
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function opPlayLine(timer, event, purefactor, t, avifilename)
 % Draw and animate the vertical line.
-% Also save it as a movie if avifilename is present and non-empty.
+% Also save it as a movie if avifilename is given.
 
 global opSRate opAxes opFig opFps opDateFix opc spAudioPlayer
 
@@ -234,7 +234,7 @@ global opSRate opAxes opFig opFps opDateFix opc spAudioPlayer
 %    UserData{1} is the clock time that this timer started
 %    UserData{2} is the vertical line object
 %    UserData{3} is the start time of the selection, namely t0 (in the gram)
-%    UserData{4} is the  duration  of the selection, namely t1-t0 (in the gram)
+%    UserData{4} is the end   time of the selection, namely t1 (in the gram)
 %    UserData{5} is purefactor
 %    UserData{6} is the avifile object, if any, for saving a movie to a file;
 %                  present only if we're making an AVI movie
@@ -243,14 +243,13 @@ global opSRate opAxes opFig opFps opDateFix opc spAudioPlayer
 
 switch event.Type
 case 'StartFcn'
-  %printf('start:  %s', datestr(event.Data.time, 'HH:MM:SS.FFF'))
+  printf('start:  %s', datestr(event.Data.time, 'HH:MM:SS.FFF'))
   is_movie = ((nargin >= 5) && ~isempty(avifilename));
   axes(opAxes(opc));
-%   u{1} = datenum(event.Data.time);
-  u{1} = NaN;		% flag value meaning TimerFcn hasn't been called yet
+  u{1} = datenum(event.Data.time);
   u{2} = line(t([1 1])+opDateFix, [0 opSRate/2], 'Color','r','LineWidth',1.5);
   u{3} = t(1);
-  u{4} = t(2) - t(1);
+  u{4} = t(2);
   u{5} = purefactor;
   if (is_movie)
     fn = opFileName('getsound');
@@ -262,38 +261,33 @@ case 'StartFcn'
   opPlayAddFrame(timer, u);          % make first frame have no red line
 
 case 'TimerFcn'
-  %printf('timer:  %s (now=%s)', datestr(event.Data.time, 'HH:MM:SS.FFF'),...
-    %datestr(now, 'HH:MM:SS.FFF'))
+  printf('timer:  %s (now=%s)', datestr(event.Data.time, 'HH:MM:SS.FFF'),...
+    datestr(now, 'HH:MM:SS.FFF'))
   % u is {clockStartTime lineObj t0 t1 purefactor optionalAviFile}
   u = get(timer, 'UserData');
-  if (isnan(u{1})), u{1} = now; set(timer, 'UserData', u); end
   t0 = u{3};
-  tDur = u{4};
+  t1 = u{4};
   purefactor = u{5};
   % Real playback uses real time; in movie-making, just count frames.
-%   tNow = t0 + (datenum(event.Data.time)-u{1})*24*60*60*purefactor;
-  tNow = t0 + (now - u{1}) * 24*60*60 * purefactor;
+  tNow = t0 + (datenum(event.Data.time)-u{1})*24*60*60*purefactor;
   if (length(u) >= 6)                   % AVI movie?
     tNow = t0 + get(timer,'TasksExecuted') / opFps * purefactor; 
   end
   if (~ishandle(u{2}))     % happens if user scrolls during playback
-    if (ishandle(opAxes(opc)))
-      axes(opAxes(opc));
-      % Create the line again here; its time (x-position) is set below.
-      u{2} = line([1 1], [0 opSRate/2], 'Color','r','LineWidth',1.5);
-      set(timer, 'UserData', u)
-    end
+    axes(opAxes(opc));
+    u{2} = line([1 1], [0 opSRate/2], 'Color','r','LineWidth',1.5);%fix time below
+    set(timer, 'UserData', u)
   end
   %printf('  mid_x  %s', datestr(tNow + opDateFix, 'HH:MM:SS.FFF'))
   set(u{2}, 'XData', tNow * [1 1] + opDateFix);
   %drawnow
   opPlayAddFrame(timer, u)
-  if (tNow > t0 + tDur)
+  if (tNow > t1)
     stop(timer);
   end
 
 case 'StopFcn'
-  %printf('stop:   %s\n\n', datestr(event.Data.time, 'HH:MM:SS.FFF'))
+  printf('stop:   %s\n\n', datestr(event.Data.time, 'HH:MM:SS.FFF'))
   u = get(timer, 'UserData');
   if (ishandle(u{2})), delete(u{2}); end        % remove the line
   opPlayAddFrame(timer, u);			% add frame with no line

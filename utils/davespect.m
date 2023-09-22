@@ -57,6 +57,8 @@ function [result,fRate,gramParams] = ...
 % Dave Mellinger
 % David.Mellinger, oregonstate.edu
 
+hanning(1);
+
 % Parse args.
 if (isstruct(frameSize))
   % 'frameSize' arg is really this struct, 'nOverlap' is really sRate.

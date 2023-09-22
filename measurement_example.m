@@ -13,7 +13,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Configuration                                                         %
 %    The configuration section needs to set these variables:
-%       inputSound -- the name of the sound fileto measure
+%       inputSound -- the name of the sound file to measure
 %       outputLog  -- the name of the file to write the result to
 %       timesToMeasure -- a 2-column array with start- & end-times of calls
 %       freqToMeasure  -- a 2-column array the same size as timesToMeasure with

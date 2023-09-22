@@ -16,6 +16,7 @@ function osprey(varargin)
 %    osprey filename.ext
 %    osprey('filename.ext')
 %    osprey('"filename.ext"')		   Osprey will remove the double quotes
+%    osprey("filename.ext")		   
 %    osprey('filename', 'type')            where 'type' is 'WAV', 'AIF', etc.
 %    osprey('filename', samplingrate)
 %    osprey(samplevector, samplingrate)
@@ -26,7 +27,12 @@ function osprey(varargin)
 %
 % The simplest way to start Osprey is just to type "osprey" at a MATLAB prompt,
 % then pick a sound file in the dialog box that shows up.  You can also type
-% "osprey filename.ext" to start it up looking at a file named filename.ext.
+% "osprey filename.ext" to start it up looking at a file named filename.ext. 
+%
+% To open a file easily from the Windows File Explorer, hold down the Shift key,
+% right-click on the file, and choose "Copy path". Then go to the MATLAB command
+% window, type in "osprey(" without the quotes, do a paste (Ctrl-V), type ")",
+% and press Enter.
 %
 % Osprey determines the sound file type from the file extension. If your file
 % name does not have an extension, you start Osprey with two arguments: the
@@ -69,6 +75,9 @@ end
 
 newZoom = [];
 arg1 = varargin{1};
+
+% Handle string (double-quote) filenames by converting to char array.
+if (isstring(arg1)), arg1 = char(arg1); end	
 
 if (ischar(arg1) && strcmp(arg1, 'help'))
   fprintf(1, '\n\n======================================================\n\n');
@@ -145,7 +154,11 @@ f = opFileName('getsound');		% get filename, or '' for sample vector
 
 % Start up display
 opInitialFrame;				% initial time and freq bounds
-opRedraw('repaint', f, 1);		% compute spect, paint window
+if (opExists < 2)
+  opRedraw('repaint', f, 1);		% compute spect, paint window
+else
+  opInitFigure(f);
+end
 opPlay('setratetext');			% set up popup
 
 % Set the popups to the current settings.
